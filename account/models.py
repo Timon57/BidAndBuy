@@ -31,7 +31,7 @@ class UserBase(AbstractBaseUser,PermissionsMixin):
     address = models.CharField(max_length=250,blank=True)
     role = models.CharField(max_length=10,choices=ROLE_CHOICES)
     is_active = models.BooleanField(default=True)
-    is_staff = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False)
     created = models.DateField(auto_now_add=True)
     updated = models.DateField(auto_now=True)
