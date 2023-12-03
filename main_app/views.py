@@ -1,8 +1,8 @@
 from django.shortcuts import render,get_object_or_404,redirect
-from .models import Category
+from .models import Category,Auction,Bid,Product
 from .forms import CategoryForm
 
-
+#CRUD operation for category stars
 def category_list(request):
     category_list = Category.objects.all()
     context = {'category_list':category_list}
@@ -35,5 +35,26 @@ def category_delete(request,pk):
     data.is_active=False
     data.save()
     return redirect('category-list')
+#Ends category crud
+
+#Home page view of the website
+def home(request):
+    products = Product.objects.all()
+    context = {
+        'products':products
+    }
+    return render(request,'home.html',context)
+
+
+
+#Auction 
+def auction_home(request):
+    auctions = Auction.objects.filter(auction_status='open')
+    context = {
+        'auctions':auctions
+    }
+    return render(request,'main_app/Auction/auction_home.html',context)
+
+
         
 
