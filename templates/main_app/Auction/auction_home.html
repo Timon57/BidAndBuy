@@ -12,12 +12,12 @@
         {% for auction in auctions %}
         <div class="col-md-4 mb-4">
             <div class="card h-100">
-                <a href="#">
+                <a href="{{auction.get_absolute_url}}">
                     <img src="{{ auction.image.url }}" alt="Auction Image" class="card-img-top img-fluid" style="object-fit: contain; height: 200px;">
                 </a>
                 <div class="card-body">
-                    <p class="text-muted">Seller: <code>@{{ auction.seller }}</code></p>
-                    <a href="#" class="card-link">
+                    <p class="text-muted">Seller: <b>{{ auction.seller }}</b></p>
+                    <a href="{{auction.get_absolute_url}}" class="card-link">
                         <h5 class="card-title">{{ auction.title }}</h5>
                     </a>
                     <p class="card-text">{{ auction.description|truncatewords:20 }}</p>
@@ -25,19 +25,14 @@
                         <span class="text-success font-weight-bold">
                             Starting Price: ${{ auction.starting_price }}
                         </span>
-                        <small class="text-muted">Created {{ auction.created_at }}</small>
                     </div>
-                    <div class="mt-2">
-                        {% if auction.auction_status == 'open' %}
-                            <span class="badge badge-success">Open</span>
-                        {% else %}
-                            <span class="badge badge-warning">Closed</span>
-                        {% endif %}
-                    </div>
+                    <span class="text-success font-weight-bold">
+                        Highest bid: ${{ auction.get_max_bid }}
+                   </span>
                 </div>
                 <div class="card-footer">
                     Categories:
-                    <a href="#">{{ auction.category }}</a>
+                    <b>{{ auction.category }}</b>
                 </div>
             </div>
         </div>

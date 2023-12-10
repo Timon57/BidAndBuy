@@ -4,6 +4,8 @@ from bidandbuy.settings import AUTH_USER_MODEL
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from decimal import Decimal
+from django.db.models import Max
+from django.utils import timezone
 
 class Category(models.Model):
 
@@ -80,21 +82,40 @@ class Auction(models.Model):
         verbose_name_plural = 'Auctions'
 
     def get_absolute_url(self):
-        return reverse("auction_detail", args=[self.pk])
+        return reverse("auction-detail", args=[self.pk])
+    
+    def get_max_bid(self):
+        return Bid.get_max_bid_for_auction(self.id)
+    
+    def get_remaining_time(self):
+        now = timezone.now()
+
+        if now < self.start_datetime:
+            return "Auction has not started yet."
+        elif now > self.end_datetime:
+            return "Auction has ended."
+
+        remaining_time = self.end_datetime - now
+        return remaining_time
+    
     
 
 class Bid(models.Model):
     bidder = models.ForeignKey(AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="bid_owner")
-    auction_id = models.ForeignKey(Auction, on_delete=models.CASCADE, related_name="Bid_listing")
+    auction_id = models.ForeignKey(Auction, on_delete=models.CASCADE, related_name="bid_listing")
     bid_value = models.DecimalField(max_digits=10, decimal_places=2)
     bid_datetime = models.DateTimeField(auto_now=True)
 
-    def clean(self):
-        """
-        Custom validation to ensure bid_value is greater than the starting_price of the auction.
-        """
-        if self.bid_value <= self.auction.starting_price:
-            raise ValidationError({'bid_value': "Bid value must be greater than the starting price of the auction."})
+    def __str__(self):
+        return str(self.bid_value)
+
+    
+
+        
+    @staticmethod
+    def get_max_bid_for_auction(auction_id):
+        max_bid = Bid.objects.filter(auction_id=auction_id).aggregate(Max('bid_value'))['bid_value__max']
+        return max_bid or 0
     
 
 

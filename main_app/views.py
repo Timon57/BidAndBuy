@@ -1,6 +1,7 @@
 from django.shortcuts import render,get_object_or_404,redirect
 from .models import Category,Auction,Bid,Product
-from .forms import CategoryForm
+from .forms import CategoryForm,BidForm
+from django.contrib import messages
 
 #CRUD operation for category stars
 def category_list(request):
@@ -50,11 +51,38 @@ def home(request):
 #Auction 
 def auction_home(request):
     auctions = Auction.objects.filter(auction_status='open')
+    
     context = {
         'auctions':auctions
     }
     return render(request,'main_app/Auction/auction_home.html',context)
 
+def auction_detail(request, pk):
+    auction = get_object_or_404(Auction, id=pk)
+    form = BidForm(request.POST or None)
+
+    if request.method == 'POST':
+        if form.is_valid():
+            bid_value = form.cleaned_data['bid_value']
+
+            # Perform your custom validation here
+            if bid_value <= auction.starting_price:
+                messages.error(request, 'Bid value must be greater than the starting price.')
+            if bid_value <= auction.get_max_bid():
+                messages.error(request, 'Bid value must be greater than the current higest price.')
+            else:
+                bid = form.save(commit=False)
+                bid.bidder = request.user
+                bid.auction_id = auction
+                bid.save()
+                return redirect('auction-detail', pk=pk)
+
+    context = {
+        'auction': auction,
+        'form': form,
+    }
+
+    return render(request, 'main_app/Auction/auction_detail.html', context)
 
         
 

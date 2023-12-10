@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Auction Detail{% endblock %}
+{% block content %}
+  {% include "navbar.html" %}
+
+  <div class="container">
+    <div class="row">
+      <div class="col-md-8">
+        <h2>{{ auction.title }}</h2>
+        <img src="{{ auction.image.url }}" alt="{{ auction.title }}" class="img-fluid mb-4" style="object-fit: contain; max-height: 400px;">
+        <p class="lead">{{ auction.description }}</p>
+      </div>
+      <div class="col-md-4">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title">Auction Details</h5>
+            <ul class="list-group list-group-flush">
+              <li class="list-group-item">Starting Price: ${{ auction.starting_price }}</li>
+              <li class="list-group-item">Current Highest Bid: ${{ auction.get_max_bid|floatformat:2 }}</li>
+              <li class="list-group-item">Seller: {{ auction.seller }}</li>
+              <li class="list-group-item">Category: {{ auction.category }}</li>
+              <li class="list-group-item">Status: {{ auction.get_auction_status_display }}</li>
+              <li class="list-group-item">Time left: {{ auction.get_remaining_time }}</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Bid Form -->
+        <div class="card mt-3">
+          <div class="card-body">
+            <h5 class="card-title">Place a Bid</h5>
+            <form method="post" action="">
+              {% csrf_token %}
+              {% for field in form %}
+              <div class="form-group">
+                <label class="form-label" for="{{ field.id_for_label }}">
+                    {{ field.label }}
+                </label>
+                {{field}}
+                {% if messages %}
+                <ul class="alert alert-danger">
+                    {% for message in messages %}
+                    <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+              </div>
+              {% endfor %}
+              <button type="submit" class="btn btn-primary">Submit Bid</button>
+            </form>
+          </div>
+        </div>
+        <!-- End Bid Form -->
+      </div>
+    </div>
+  </div>
+
+{% endblock %}
