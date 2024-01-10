@@ -16,7 +16,7 @@
             <h5 class="card-title">Auction Details</h5>
             <ul class="list-group list-group-flush">
               <li class="list-group-item">Starting Price: ${{ auction.starting_price }}</li>
-              <li class="list-group-item">Current Highest Bid: ${{ auction.get_max_bid|floatformat:2 }}</li>
+              <li class="list-group-item" id="current-highest-bid">Current Highest Bid: ${{ auction.get_max_bid|floatformat:2 }}</li>
               <li class="list-group-item">Seller: {{ auction.seller }}</li>
               <li class="list-group-item">Category: {{ auction.category }}</li>
               <li class="list-group-item">Status: {{ auction.get_auction_status_display }}</li>
@@ -29,7 +29,7 @@
         <div class="card mt-3">
           <div class="card-body">
             <h5 class="card-title">Place a Bid</h5>
-            <form method="post" action="">
+            <form method="post" action="" id="bid-form" name="bid">
               {% csrf_token %}
               {% for field in form %}
               <div class="form-group">
@@ -37,22 +37,80 @@
                     {{ field.label }}
                 </label>
                 {{field}}
-                {% if messages %}
-                <ul class="alert alert-danger">
-                    {% for message in messages %}
-                    <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
-                    {% endfor %}
-                </ul>
-                {% endif %}
               </div>
               {% endfor %}
               <button type="submit" class="btn btn-primary">Submit Bid</button>
             </form>
+            <!-- Display validation messages here -->
+            <div id="validation-messages" class="text-danger"></div>
           </div>
         </div>
+        
         <!-- End Bid Form -->
       </div>
     </div>
   </div>
+ 
+<script type="text/javascript">
+  // Function to submit a bid
+  function submitBid(event) {
+    event.preventDefault();  // Prevent the default form submission
 
+    let bidValue = document.getElementById('id_bid_value').value;
+
+    // Perform client-side validation
+    let validationMessages = document.getElementById('validation-messages');
+    validationMessages.innerHTML = ''; // Clear previous messages
+
+    if (parseFloat(bidValue) <= parseFloat('{{ auction.starting_price }}')) {
+      validationMessages.innerText = 'Bid value must be greater than the starting price.';
+      return;
+    }
+    if (parseFloat(bidValue) <= parseFloat('{{ auction.get_max_bid }}')) {
+      validationMessages.innerText = 'Bid value must be greater than the current highest price.';
+      return;
+    }
+
+    let formData = new FormData(document.getElementById('bid-form'));
+
+    fetch(window.location.pathname, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRFToken': '{{ csrf_token }}'
+      },
+    })
+    .then(response => response.json())
+    .then(data => {
+      console.log('Bid update:', data.bid_value);
+      document.getElementById('current-highest-bid').innerText = `Current Highest Bid: $${data.bid_value}`;
+    })
+    .catch(error => {
+      console.error('Error submitting bid:', error);
+    });
+  }
+
+  // Attach the submitBid function to the form's onsubmit event
+  document.getElementById('bid-form').onsubmit = submitBid;
+
+  // Establish WebSocket connection
+  let url = `ws://${window.location.host}/ws/auction/{{ auction.id }}/`;
+  const auctionSocket = new WebSocket(url);
+
+  auctionSocket.onmessage = function(e) {
+      const data = JSON.parse(e.data);
+      console.log('Data', data);
+      // Update the UI with the new bid value
+      // For example, you can update the 'Current Highest Bid' in the list
+      document.getElementById('current-highest-bid').innerText = `Current Highest Bid: $${data.bid_value}`;
+  };
+
+  console.log("WebSocket instance created:", auctionSocket);
+
+  auctionSocket.onclose = function (e) {
+      console.error('WebSocket closed unexpectedly');
+  };
+</script>
+  
 {% endblock %}

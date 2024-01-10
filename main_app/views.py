@@ -1,4 +1,5 @@
 from django.shortcuts import render,get_object_or_404,redirect
+from django.http import JsonResponse
 from .models import Category,Auction,Bid,Product
 from .forms import CategoryForm,BidForm
 from django.contrib import messages
@@ -75,7 +76,12 @@ def auction_detail(request, pk):
                 bid.bidder = request.user
                 bid.auction_id = auction
                 bid.save()
-                return redirect('auction-detail', pk=pk)
+                auction_details = {
+                'bid_value': auction.get_max_bid(),
+                # Add other details as needed
+            }
+
+            return JsonResponse(auction_details)
 
     context = {
         'auction': auction,
