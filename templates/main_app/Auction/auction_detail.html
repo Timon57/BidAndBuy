@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Auction Detail{% endblock %}
 {% block content %}
   {% include "navbar.html" %}
@@ -17,10 +18,11 @@
             <ul class="list-group list-group-flush">
               <li class="list-group-item">Starting Price: ${{ auction.starting_price }}</li>
               <li class="list-group-item" id="current-highest-bid">Current Highest Bid: ${{ auction.get_max_bid|floatformat:2 }}</li>
+              <li class="list-group-item" id="current-higehst-bidder">Highest bidder: {{ auction.get_higest_bidder }}</li>
               <li class="list-group-item">Seller: {{ auction.seller }}</li>
               <li class="list-group-item">Category: {{ auction.category }}</li>
               <li class="list-group-item">Status: {{ auction.get_auction_status_display }}</li>
-              <li class="list-group-item">Time left: {{ auction.get_remaining_time }}</li>
+              <li class="list-group-item" id="countdown">Time left: {{ auction.get_remaining_time|date:"H:i" }}</li>
             </ul>
           </div>
         </div>
@@ -51,66 +53,130 @@
     </div>
   </div>
  
-<script type="text/javascript">
+  <script >
+    
+  let url = `ws://${window.location.host}/ws/auction/{{ auction.id }}/`;
+  const auctionSocket = new WebSocket(url);
+
+  auctionSocket.onopen = function (){
+    console.log('WebSocket connection opened.');
+
+}
+
+
+auctionSocket.onmessage = function (e) {
+  const data = JSON.parse(e.data);
+  console.log('Data', data);
+
+  if (data.type === 'time_update') {
+    const remainingTime = data.remaining_time;
+    // Update the countdown using the function
+    updateCountdown(remainingTime);
+  } else if (data.type === 'bid_update') {
+    // Handle bid update logic
+    document.getElementById('current-highest-bid').innerText = `Current Highest Bid: $${data.bid_value}`;
+    document.getElementById('current-higehst-bidder').innerText = `Highest Bidder: ${data.highest_bidder}`;
+    const remainingTime = data.remaining_time;
+    updateCountdown(remainingTime);
+  }
+};
+  //for countdown time
+  const countdownElement = document.getElementById('countdown');
+  
+
+  function updateCountdown(remainingTime){
+    // Clear previous interval to avoid multiple intervals
+
+    // Set up a new interval to update the countdown every second
+    const countdownInterval = setInterval(function () {
+      const days = Math.floor(remainingTime / (60 * 60 * 24));
+      const hours = Math.floor((remainingTime % (60 * 60 * 24)) / (60 * 60));
+      const minutes = Math.floor((remainingTime % (60 * 60)) / 60);
+      const seconds = Math.floor(remainingTime % 60);
+
+      // Use the pad function to ensure consistent two-digit formatting
+      const pad = (num) => (num < 10 ? `0${num}` : num);
+
+      // Format the time components with consistent two-digit formatting
+      const formattedTime = `${pad(days)}d ${pad(hours)}h ${pad(minutes)}m ${pad(seconds)}s`;
+
+      // Update the countdown with the formatted time
+      countdownElement.textContent = `Time left: ${formattedTime}`;
+
+      // Decrease the remaining time by one second
+      remainingTime--;
+
+      // Stop the interval when remainingTime reaches 0
+      if (remainingTime < 0) {
+        clearInterval(countdownInterval);
+      }
+    }, 1000); // Update every second
+  }
+    
+
   // Function to submit a bid
-  function submitBid(event) {
-    event.preventDefault();  // Prevent the default form submission
+function submitBid(event) {
+  event.preventDefault(); // Prevent the default form submission
 
-    let bidValue = document.getElementById('id_bid_value').value;
+  let bidValue = document.getElementById('id_bid_value').value;
 
-    // Perform client-side validation
-    let validationMessages = document.getElementById('validation-messages');
-    validationMessages.innerHTML = ''; // Clear previous messages
+  // Perform client-side validation
+  let validationMessages = document.getElementById('validation-messages');
+  validationMessages.innerHTML = ''; // Clear previous messages
+  
+  // Additional validation for bid length
+  if (bidValue.length > 8) {
+    validationMessages.innerText = 'Bid value cannot be greater than 8 digits.';
+    document.getElementById('id_bid_value').value = '';
+    return;
+  }
 
-    if (parseFloat(bidValue) <= parseFloat('{{ auction.starting_price }}')) {
-      validationMessages.innerText = 'Bid value must be greater than the starting price.';
-      return;
-    }
-    if (parseFloat(bidValue) <= parseFloat('{{ auction.get_max_bid }}')) {
-      validationMessages.innerText = 'Bid value must be greater than the current highest price.';
-      return;
-    }
+  if (parseFloat(bidValue) <= parseFloat('{{ auction.starting_price }}')) {
+    validationMessages.innerText = 'Bid value must be greater than the starting price.';
+    document.getElementById('id_bid_value').value = '';
+    return;
+  }
+  if (parseFloat(bidValue) <= parseFloat('{{ auction.get_max_bid }}')) {
+    validationMessages.innerText = 'Bid value must be greater than the current highest price.';
+    document.getElementById('id_bid_value').value = '';
+    return;
+  }
 
-    let formData = new FormData(document.getElementById('bid-form'));
+  let formData = new FormData(document.getElementById('bid-form'));
 
-    fetch(window.location.pathname, {
-      method: 'POST',
-      body: formData,
-      headers: {
-        'X-Requested-With': 'XMLHttpRequest',
-        'X-CSRFToken': '{{ csrf_token }}'
-      },
+  fetch(window.location.pathname, {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'X-Requested-With': 'XMLHttpRequest',
+      'X-CSRFToken': '{{ csrf_token }}',
+    },
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      return response.json();
     })
-    .then(response => response.json())
-    .then(data => {
+    .then((data) => {
       console.log('Bid update:', data.bid_value);
       document.getElementById('current-highest-bid').innerText = `Current Highest Bid: $${data.bid_value}`;
     })
-    .catch(error => {
+    .catch((error) => {
       console.error('Error submitting bid:', error);
+      validationMessages.innerText = 'Error submitting bid. Please try again.';
     });
-  }
+
+  auctionSocket.send(JSON.stringify({
+    bidValue: bidValue,
+  }));
+}
 
   // Attach the submitBid function to the form's onsubmit event
   document.getElementById('bid-form').onsubmit = submitBid;
 
-  // Establish WebSocket connection
-  let url = `ws://${window.location.host}/ws/auction/{{ auction.id }}/`;
-  const auctionSocket = new WebSocket(url);
+  
 
-  auctionSocket.onmessage = function(e) {
-      const data = JSON.parse(e.data);
-      console.log('Data', data);
-      // Update the UI with the new bid value
-      // For example, you can update the 'Current Highest Bid' in the list
-      document.getElementById('current-highest-bid').innerText = `Current Highest Bid: $${data.bid_value}`;
-  };
-
-  console.log("WebSocket instance created:", auctionSocket);
-
-  auctionSocket.onclose = function (e) {
-      console.error('WebSocket closed unexpectedly');
-  };
-</script>
+  </script>
   
 {% endblock %}

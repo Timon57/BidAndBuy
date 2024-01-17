@@ -87,6 +87,9 @@ class Auction(models.Model):
     def get_max_bid(self):
         return Bid.get_max_bid_for_auction(self.id)
     
+    def get_higest_bidder(self):
+        return Bid.get_highest_bidder_name(self.id)
+    
     def get_remaining_time(self):
         now = timezone.now()
 
@@ -109,9 +112,11 @@ class Bid(models.Model):
     def __str__(self):
         return str(self.bid_value)
 
-    
+    def get_highest_bidder_name(auction_id):
+        max_bid = Bid.objects.filter(auction_id=auction_id).order_by('-bid_value').first()
+        highest_bidder = max_bid.bidder.username if max_bid else None
+        return highest_bidder
 
-        
     @staticmethod
     def get_max_bid_for_auction(auction_id):
         max_bid = Bid.objects.filter(auction_id=auction_id).aggregate(Max('bid_value'))['bid_value__max']

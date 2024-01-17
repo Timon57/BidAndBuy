@@ -1,24 +1,28 @@
 import json
-from channels.generic.websocket import AsyncWebsocketConsumer
-from .models import Bid
-from asgiref.sync import async_to_sync
+from channels.generic.websocket import AsyncWebsocketConsumer,WebsocketConsumer
+from .models import Bid,Auction
+from django.shortcuts import get_object_or_404
+from channels.db import database_sync_to_async
+from django.utils import timezone
+
 
 class AuctionConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.auction_id = self.scope['url_route']['kwargs']['auction_id']
         self.auction_group_name = f"auction_{self.auction_id}"
-
         await self.channel_layer.group_add(
             self.auction_group_name,
             self.channel_name
         )
-
+        await self.accept()
+        
+        remaining_time =  await self.get_remaining_time(self.auction_id)
         await self.send(text_data=json.dumps({
-            'type': 'connection_established',
-            'message': 'You are now connected!'
+            'type': 'time_update',
+            'remaining_time': remaining_time
+            
         }))
 
-        await self.accept()
 
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(
@@ -26,23 +30,10 @@ class AuctionConsumer(AsyncWebsocketConsumer):
             self.channel_name
         )
 
-        await self.send(text_data=json.dumps({
-            'type': 'connection_closed',
-            'message': 'Connection closed by the server.'
-        }))
-
     async def receive(self, text_data):
         bid_data = json.loads(text_data)
-        bid_value = bid_data['bid_value']
+        bid_value = bid_data['bidValue']
 
-        # Save the bid
-        bid = Bid.objects.create(
-            bidder=self.scope['user'],
-            auction_id=self.auction_id,
-            bid_value=bid_value
-        )
-
-        # Send bid update to auction group
         await self.channel_layer.group_send(
             self.auction_group_name,
             {
@@ -54,8 +45,32 @@ class AuctionConsumer(AsyncWebsocketConsumer):
     # Receive bid update from auction group
     async def bid_update(self, event):
         bid_value = event['bid_value']
-
-        # Send bid update to WebSocket
+        highest_bidder = await self.get_highest_bidder_name(self.auction_id)
+        remaining_time =  await self.get_remaining_time(self.auction_id)
         await self.send(text_data=json.dumps({
-            'bid_value': bid_value
+            'type': 'bid_update',
+            'bid_value': bid_value,
+            'highest_bidder': highest_bidder,
+            'remaining_time': remaining_time
+            
         }))
+    @database_sync_to_async
+    def get_highest_bidder_name(self, auction_id):
+        max_bid = Bid.objects.filter(auction_id=auction_id).order_by('-bid_value').first()
+        highest_bidder = max_bid.bidder.username if max_bid else None
+        return highest_bidder
+    
+    @database_sync_to_async
+    def get_remaining_time(self,auction_id):
+        auction = Auction.objects.get(id = auction_id)
+        now = timezone.now()
+
+        if now < auction.start_datetime:
+            return "Auction has not started yet."
+        elif now > auction.end_datetime:
+            return "Auction has ended."
+
+        remaining_time = auction.end_datetime - now
+        return remaining_time.total_seconds()
+
+
