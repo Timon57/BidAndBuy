@@ -1,11 +1,14 @@
 from django.db import models
 from django.urls import reverse
 from bidandbuy.settings import AUTH_USER_MODEL
+from account.models import UserBase
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from decimal import Decimal
 from django.db.models import Max
 from django.utils import timezone
+from django.db.models.signals import pre_save
+from django.dispatch import receiver
 
 class Category(models.Model):
 
@@ -57,12 +60,24 @@ class Auction(models.Model):
         if self.start_datetime and self.end_datetime and self.start_datetime >= self.end_datetime:
             raise ValidationError("Start datetime must be before end datetime.")
         
+        now = timezone.now()
+
+        if now < self.start_datetime:
+            self.auction_status = 'draft'
+        elif self.start_datetime <= now <= self.end_datetime:
+            self.auction_status = 'open'
+        elif now > self.end_datetime:
+            self.auction_status = 'closed'
+            self.set_winner()
+
     AUCTION_STATUS_CHOICES = (
         ('draft', 'Draft'),
         ('open', 'open'),
         ('closed', 'Closed'),
     )
+    
 
+    winner = models.ForeignKey(AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, editable=False)
     title = models.CharField(max_length=255)
     description = models.TextField()
     starting_price = models.DecimalField(max_digits=10, decimal_places=2)
@@ -101,7 +116,26 @@ class Auction(models.Model):
         remaining_time = self.end_datetime - now
         return remaining_time
     
-    
+    def set_winner(self):
+        highest_bidder = Bid.get_highest_bidder_name(self.id)
+        if highest_bidder:
+            highest_bidder = UserBase.objects.get(username=highest_bidder)
+            self.winner = highest_bidder
+        else:
+            self.winner = None
+
+def update_auction_status(sender, instance, **kwargs):
+    now = timezone.now()
+
+    if now < instance.start_datetime:
+        instance.auction_status = 'draft'
+    elif instance.start_datetime <= now <= instance.end_datetime:
+        instance.auction_status = 'open'
+    elif now > instance.end_datetime:
+        instance.auction_status = 'closed'
+        instance.set_winner()
+
+pre_save.connect(update_auction_status, sender=Auction)
 
 class Bid(models.Model):
     bidder = models.ForeignKey(AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="bid_owner")
@@ -122,5 +156,4 @@ class Bid(models.Model):
         max_bid = Bid.objects.filter(auction_id=auction_id).aggregate(Max('bid_value'))['bid_value__max']
         return max_bid or 0
     
-
 

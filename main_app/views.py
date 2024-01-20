@@ -1,10 +1,13 @@
 from django.shortcuts import render,get_object_or_404,redirect
 from django.http import JsonResponse
 from .models import Category,Auction,Bid,Product
-from .forms import CategoryForm,BidForm
+from .forms import CategoryForm,BidForm,AuctionForm
 from django.contrib import messages
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
 
-#CRUD operation for category stars
+
+#CRUD operation for category starts
 def category_list(request):
     category_list = Category.objects.all()
     context = {'category_list':category_list}
@@ -39,24 +42,80 @@ def category_delete(request,pk):
     return redirect('category-list')
 #Ends category crud
 
-#Home page view of the website
-def home(request):
-    products = Product.objects.all()
-    context = {
-        'products':products
-    }
-    return render(request,'home.html',context)
-
-
-
-#Auction 
-def auction_home(request):
-    auctions = Auction.objects.filter(auction_status='open')
+#Auction Crud starts here
+def auction_list(request):
+    auctions = Auction.objects.filter(seller=request.user)
     
     context = {
         'auctions':auctions
     }
-    return render(request,'main_app/Auction/auction_home.html',context)
+    return render(request,'main_app/Auction/auction_list.html',context)
+
+
+
+def auction_create(request):
+    if request.method == 'POST':
+        form = AuctionForm(request.POST,request.FILES)
+        if form.is_valid():
+            auction = form.save(commit=False)
+            auction.seller = request.user
+            auction.save()
+            return redirect('auction-list')
+    else:
+        form = AuctionForm()
+
+    context = {'form': form}
+    return render(request, 'main_app/Auction/auction_create.html', context)
+    
+
+def auction_update(request, pk):
+    data = get_object_or_404(Auction, id=pk)
+
+    if request.method == 'POST':
+        form = AuctionForm(request.POST, request.FILES, instance=data)
+        if form.is_valid():
+            # Handle file field update
+            if 'image' in form.changed_data:
+                # Clear the existing file
+                if data.image:
+                    default_storage.delete(data.image.path)
+                # Save the new file
+                image_file = form.cleaned_data['image']
+                data.image.save(image_file.name, ContentFile(image_file.read()))
+
+            form.save()
+            return redirect('auction-list')
+    else:
+        form = AuctionForm(instance=data)
+
+    context = {'form': form, 'auction': data}
+
+    return render(request, 'main_app/Auction/auction_update.html', context)
+
+
+#Home page view of the website
+
+def home(request):
+    if request.user.role == 'Buyer':
+        auctions = Auction.objects.filter(auction_status='open')
+    else:
+        auctions = Auction.objects.all()
+    
+    context = {
+        'auctions':auctions
+    }
+    return render(request,'main_app/Auction/home.html',context)
+
+def update_auction_status(request, pk):
+    data = get_object_or_404(Auction, id=pk)
+    print(data.auction_status)
+
+    if request.method == 'POST':
+        data.auction_status == 'closed'
+        data.save()
+        return JsonResponse({'status':'success','auction_status':data.auction_status})
+
+    return JsonResponse({'status': 'error', 'message': 'Invalid request.'}, status=400)
 
 def auction_detail(request, pk):
     auction = get_object_or_404(Auction, id=pk)
