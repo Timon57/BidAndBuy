@@ -25,6 +25,11 @@
                       {% endfor %}
                   </ul>
               </li>
+              {% if win_auction %}
+              <li class="nav-item">
+                <a class="nav-link" href="{% url 'auction-list' %}">My order</a>
+            </li>
+              {% endif %}
               
           </ul>
           

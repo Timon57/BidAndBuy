@@ -156,10 +156,8 @@ def home_particular_category(request,pk):
 
 
 @login_required
-@seller_required
 def update_auction_status(request, pk):
     data = get_object_or_404(Auction, id=pk)
-    print(data.auction_status)
 
     if request.method == 'POST':
         data.auction_status == 'closed'
@@ -178,6 +176,7 @@ def auction_detail(request, pk):
             bid_value = form.cleaned_data['bid_value']
             #storing data to use for recommendations
             UserBid.objects.create(user=request.user, auction=auction, bid_value=bid_value, category=auction.category)
+
             # Perform your custom validation here
             if bid_value <= auction.starting_price:
                 messages.error(request, 'Bid value must be greater than the starting price.')
@@ -190,6 +189,7 @@ def auction_detail(request, pk):
                 bid.save()
                 auction_details = {
                 'bid_value': auction.get_max_bid(),
+                'bidder':auction.get_higest_bidder()
                 # Add other details as needed
             }
 

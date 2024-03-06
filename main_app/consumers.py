@@ -34,19 +34,22 @@ class AuctionConsumer(AsyncWebsocketConsumer):
     async def receive(self, text_data):
         bid_data = json.loads(text_data)
         bid_value = bid_data['bidValue']
+        bidder = bid_data['bidder']
 
         await self.channel_layer.group_send(
             self.auction_group_name,
             {
                 'type': 'bid_update',
-                'bid_value': bid_value
+                'bid_value': bid_value,
+                'bidder':bidder,
+                'auction_id': self.auction_id
             }
         )
 
     # Receive bid update from auction group
     async def bid_update(self, event):
         bid_value = event['bid_value']
-        highest_bidder = await self.get_highest_bidder_name(self.auction_id)
+        highest_bidder = event['bidder']
         remaining_time =  await self.get_remaining_time(self.auction_id)
         await self.send(text_data=json.dumps({
             'type': 'bid_update',
@@ -58,6 +61,7 @@ class AuctionConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_highest_bidder_name(self, auction):
         max_bid = Bid.objects.filter(auction_id=auction).order_by('-bid_value').first()
+
         highest_bidder = max_bid.bidder.username if max_bid else None
         return highest_bidder
     

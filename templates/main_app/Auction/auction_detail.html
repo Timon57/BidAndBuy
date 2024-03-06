@@ -196,9 +196,12 @@ function submitBid(event) {
       console.error('Error submitting bid:', error);
       validationMessages.innerText = 'Error submitting bid. Please try again.';
     });
-
+    console.log(bidder)
   auctionSocket.send(JSON.stringify({
     bidValue: bidValue,
+    bidder:bidder,
+
+    
   }));
   value = bidValue
 }
@@ -210,52 +213,55 @@ function submitBid(event) {
   }
 
   // Function to send a request to update auction status when the end time is reached
+  let statusUpdated = false;
   function checkEndTime() {
     const now = new Date();
+    console.log(now);
     const auctionId = {{ auction.id|default:0 }};
     const endTime = new Date("{{ auction.end_datetime|date:'Y-m-d H:i:s' }}");
   
     if (now >= endTime) {
-      // Auction has ended, send a request to update the auction status
-      fetch(`/auction/update/status/{{ auction.id }}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Requested-With': 'XMLHttpRequest',
-          'X-CSRFToken': '{{ csrf_token }}',
-        },
-        body: JSON.stringify({ auction_id: auctionId }),
-      })
+      let statusUpdated = true;
+        // Auction has ended, send a request to update the auction status
+        fetch(`update/status/{{ auction.id }}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': '{{ csrf_token }}',
+            },
+            body: JSON.stringify({ auction_id: {{ auction.id }} }),
+        })
         .then((response) => {
-          console.log('Server Response:', response);
-          if (!response.ok) {
-            throw new Error('Network response was not ok');
-          }
-          return response.json();
+            console.log('Server Response:', response);
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
         })
         .then((data) => {
-          // Optionally handle the response data
-          let status = document.getElementById('auction-status').innerText.toLowerCase();
-          console.log(status)
-          if (data.status === 'success') {
-            if(status === 'closed'){
-              location.reload();
+            // Optionally handle the response data
+            if (data.status === 'success') {
+                // Auction status updated successfully
+                
+                location.reload();
+                console.log('Auction status updated successfully');
+            } else {
+                // Auction status update failed, handle the error
+                console.error('Error updating auction status:', data.message);
             }
-          } else {
-            // Auction status update failed, handle the error
-            console.error('Error updating auction status:', data.message);
-          }
         })
         .catch((error) => {
-          console.error('Error updating auction status:', error);
+            console.error('Error updating auction status:', error);
         });
-      clearInterval(countdownInterval); // Stop the interval
+        clearInterval(countdownInterval); // Stop the interval
     }
-  }
+}
+console.log('{{auction.auction_status}}')
+if('{{auction.auction_status}}'==='open'){//to ensure the function run only for the open auction 
+  // Call checkEndTime to initiate the check when the page loads
+  const countdownInterval = setInterval(checkEndTime, 1000);}
 
-// Call checkEndTime to initiate the check when the page loads
-const countdownInterval = setInterval(checkEndTime, 1000);
-  
   </script>
   
 {% endblock %}

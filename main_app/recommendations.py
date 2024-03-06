@@ -54,8 +54,8 @@ def auction_recommendation(request):
     else:
         user_data = []
     user_df = pd.Series(user_data)
-    print('---user data--')
-    print(user_df)
+    # print('---user data--')
+    # print(user_df)
     
 
 
@@ -91,16 +91,21 @@ def auction_recommendation(request):
         print(cosine_sim)
 
          # Get indices of top five highest similarity scores
-        top_indices = cosine_sim.argsort(axis=0)[-5:][::-1]
+        top_indices = cosine_sim.argsort(axis=0)
+        print(top_indices)
+        length = len(top_indices)
+
+        top_indices = cosine_sim.argsort(axis=0)[-3:]
+        print(top_indices)
 
 
         # Get IDs of most similar items
         top_item_ids = df.iloc[top_indices.flatten()]['id'].tolist()
-        print(top_item_ids)
+        # print(top_item_ids)
 
         # Retrieve Auction objects for the most similar items
         top_auctions = Auction.objects.filter(id__in=top_item_ids)
-        print(top_auctions)
+        # print(top_auctions)
 
         return top_auctions
     

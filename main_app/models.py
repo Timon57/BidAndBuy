@@ -149,6 +149,7 @@ class Bid(models.Model):
     def get_highest_bidder_name(auction_id):
         max_bid = Bid.objects.filter(auction_id=auction_id).order_by('-bid_value').first()
         highest_bidder = max_bid.bidder.username if max_bid else None
+
         return highest_bidder
 
     @staticmethod
