@@ -1,18 +1,24 @@
 from django.shortcuts import render,get_object_or_404,redirect
 from django.http import JsonResponse
-from .models import Category,Auction,Bid,Product
+from .models import Category,Auction,Bid,Product,UserSearch,UserBid
 from .forms import CategoryForm,BidForm,AuctionForm
 from django.contrib import messages
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
-
+from django.contrib.auth.decorators import login_required
+from .decorators import seller_required
+from .recommendations import auction_recommendation
 
 #CRUD operation for category starts
+@login_required
+@seller_required
 def category_list(request):
     category_list = Category.objects.all()
     context = {'category_list':category_list}
     return render(request,'main_app/category/category_list.html',context)
 
+@login_required
+@seller_required
 def category_create(request):
     if request.method == 'POST':
         form = CategoryForm(request.POST)
@@ -23,7 +29,9 @@ def category_create(request):
         form = CategoryForm()
         context = {'form':form}
         return render(request,'main_app/category/category_create.html',context)
-    
+
+@login_required
+@seller_required  
 def category_update(request,pk):
     data = get_object_or_404(Category,id=pk)
     form = CategoryForm(instance=data)
@@ -35,6 +43,8 @@ def category_update(request,pk):
             return redirect('category-list')
     return render(request,'main_app/category/category_update.html',context)
 
+@login_required
+@seller_required
 def category_delete(request,pk):
     data = get_object_or_404(Category,id=pk)
     data.is_active=False
@@ -43,6 +53,9 @@ def category_delete(request,pk):
 #Ends category crud
 
 #Auction Crud starts here
+
+@login_required
+@seller_required
 def auction_list(request):
     auctions = Auction.objects.filter(seller=request.user)
     
@@ -52,7 +65,8 @@ def auction_list(request):
     return render(request,'main_app/Auction/auction_list.html',context)
 
 
-
+@login_required
+@seller_required
 def auction_create(request):
     if request.method == 'POST':
         form = AuctionForm(request.POST,request.FILES)
@@ -67,7 +81,8 @@ def auction_create(request):
     context = {'form': form}
     return render(request, 'main_app/Auction/auction_create.html', context)
     
-
+@login_required
+@seller_required
 def auction_update(request, pk):
     data = get_object_or_404(Auction, id=pk)
 
@@ -94,18 +109,54 @@ def auction_update(request, pk):
 
 
 #Home page view of the website
-
+@login_required
 def home(request):
     if request.user.role == 'Buyer':
         auctions = Auction.objects.filter(auction_status='open')
     else:
         auctions = Auction.objects.all()
+
+    recommended_auctions = auction_recommendation(request)
+    # if recommended_auctions:
+    #     auctions = list(auctions) + list(recommended_auctions.values())
+    
+    context = {
+        'recommended_auctions':recommended_auctions,
+        'auctions':auctions
+    }
+    return render(request,'main_app/Auction/home.html',context)
+
+def homeSearch(request):
+    query = request.GET.get('q')
+    #storing the query searched by user for using it to recommend items
+    UserSearch.objects.create(user=request.user, searchQuery=query)
+    if request.user.role == 'Buyer':
+        auctions = Auction.objects.filter(title__icontains=query,auction_status='open')
+    else:
+        auctions = Auction.objects.filter(title__icontains=query)
     
     context = {
         'auctions':auctions
     }
     return render(request,'main_app/Auction/home.html',context)
 
+@login_required
+def home_particular_category(request,pk):
+    category = get_object_or_404(Category,id=pk)
+    if request.user.role == 'Buyer':
+        auctions = Auction.objects.filter(auction_status='open',category=category)
+    else:
+        auctions = Auction.objects.filter(category=category)
+    
+    context = {
+        'category':category,
+        'auctions':auctions
+    }
+    return render(request,'main_app/Auction/home.html',context)
+
+
+@login_required
+@seller_required
 def update_auction_status(request, pk):
     data = get_object_or_404(Auction, id=pk)
     print(data.auction_status)
@@ -117,6 +168,7 @@ def update_auction_status(request, pk):
 
     return JsonResponse({'status': 'error', 'message': 'Invalid request.'}, status=400)
 
+@login_required
 def auction_detail(request, pk):
     auction = get_object_or_404(Auction, id=pk)
     form = BidForm(request.POST or None)
@@ -124,7 +176,8 @@ def auction_detail(request, pk):
     if request.method == 'POST':
         if form.is_valid():
             bid_value = form.cleaned_data['bid_value']
-
+            #storing data to use for recommendations
+            UserBid.objects.create(user=request.user, auction=auction, bid_value=bid_value, category=auction.category)
             # Perform your custom validation here
             if bid_value <= auction.starting_price:
                 messages.error(request, 'Bid value must be greater than the starting price.')
@@ -148,6 +201,3 @@ def auction_detail(request, pk):
     }
 
     return render(request, 'main_app/Auction/auction_detail.html', context)
-
-        
-

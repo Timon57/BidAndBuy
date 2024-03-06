@@ -157,3 +157,14 @@ class Bid(models.Model):
         return max_bid or 0
     
 
+class UserSearch(models.Model):
+    user = models.ForeignKey(AUTH_USER_MODEL, on_delete=models.CASCADE)
+    searchQuery = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class UserBid(models.Model):
+    user = models.ForeignKey(AUTH_USER_MODEL, on_delete=models.CASCADE)
+    auction = models.ForeignKey(Auction, on_delete=models.CASCADE)
+    category = models.ForeignKey(Category,on_delete=models.CASCADE)
+    bid_value = models.DecimalField(max_digits=10, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True)

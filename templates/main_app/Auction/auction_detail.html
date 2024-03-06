@@ -16,19 +16,19 @@
           <div class="card-body">
             <h5 class="card-title">Auction Details</h5>
             <ul class="list-group list-group-flush">
-              <li class="list-group-item">Starting Price: ${{ auction.starting_price }}</li>
-              <li class="list-group-item" id="current-highest-bid">Current Highest Bid: ${{ auction.get_max_bid|floatformat:2 }}</li>
-              <li class="list-group-item" id="current-higehst-bidder">Highest bidder: {{ auction.get_higest_bidder }}</li>
+              <li class="list-group-item">Starting Price: Rs.{{ auction.starting_price }}</li>
+              <li class="list-group-item" id="current-highest-bid">Current Highest Bid: Rs.{{ auction.get_max_bid|default:""|floatformat:2 }}</li>
+              <li class="list-group-item" id="current-highest-bidder">Highest Bidder: {{ auction.get_higest_bidder }}</li>
               <li class="list-group-item">Seller: {{ auction.seller }}</li>
               <li class="list-group-item">Category: {{ auction.category }}</li>
               <li class="list-group-item" id="auction-status">Status: {{ auction.get_auction_status_display }}</li>
               {% if auction.auction_status == 'open' %}
-                <li class="list-group-item" id="countdown">Time left: {{ auction.get_remaining_time|date:"H:i" }}</li>
+                  <li class="list-group-item" id="countdown">Time left: {{ auction.get_remaining_time|date:"H:i" }}</li>
               {% endif %}
               {% if auction.auction_status == 'closed' %}
-                <li class="list-group-item">Winner: {{ auction.winner.username }}</li>
+                  <li class="list-group-item">Winner: {{ auction.winner.username|default:"" }}</li>
               {% endif %}
-            </ul>
+          </ul>
           </div>
         </div>
 
@@ -88,8 +88,8 @@ auctionSocket.onmessage = function (e) {
   } else if (data.type === 'bid_update') {
     // Handle bid update logic
     const bidValue = Number(data.bid_value);
-    document.getElementById('current-highest-bid').innerText = `Current Highest Bid: $${bidValue.toFixed(2)}`;
-    document.getElementById('current-higehst-bidder').innerText = `Highest Bidder: ${data.highest_bidder}`;
+    document.getElementById('current-highest-bid').innerText = `Current Highest Bid: Rs.${bidValue.toFixed(2)}`;
+    document.getElementById('current-highest-bidder').innerText = `Highest Bidder: ${data.highest_bidder}`;
     const remainingTime = data.remaining_time;
     updateCountdown(remainingTime);
   } else if (data.type === 'auction_status_update') {
@@ -142,7 +142,7 @@ function submitBid(event) {
   event.preventDefault(); // Prevent the default form submission
 
   let bidValue = document.getElementById('id_bid_value').value;
-
+  let bidder ="{{ user.username }}";
   // Perform client-side validation
   let validationMessages = document.getElementById('validation-messages');
   validationMessages.innerHTML = ''; // Clear previous messages

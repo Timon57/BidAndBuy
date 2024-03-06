@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render,redirect
 from django.http import HttpResponse
 from .forms import RegistrationForm
 
@@ -11,7 +11,7 @@ def buyer_account_register(request):
             user.set_password(form.cleaned_data['password'])
             user.role = 'Buyer'
             user.save()
-            return HttpResponse('Registration successful!')
+            return redirect('login')
         else:
             # Form is not valid, render the form with errors
             print(form.errors)
@@ -32,7 +32,7 @@ def seller_account_register(request):
             user.set_password(form.cleaned_data['password'])
             user.role = 'Seller'
             user.save()
-            return HttpResponse('Registration successful!')
+            return redirect('login')
         else:
             print(form.errors)
             # Form is not valid, render the form with errors

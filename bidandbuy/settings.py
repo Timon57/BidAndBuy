@@ -149,3 +149,7 @@ AUTH_USER_MODEL = 'account.UserBase'
 
 #where to redirect user when successful logged in 
 LOGIN_REDIRECT_URL = 'home'
+
+#to redirect user to loggedin page when they acces pages which requires log in
+#works for @login_required
+LOGIN_URL = 'login'
