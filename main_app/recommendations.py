@@ -87,8 +87,8 @@ def auction_recommendation(request):
 
         #calclucate cosine similarity
         cosine_sim = cosine_similarity(tfidf_matrix,tfidf_user_matrix)
-        print('--cosine similarity matrix--')
-        print(cosine_sim)
+        # print('--cosine similarity matrix--')
+        # print(cosine_sim)
 
          # Get indices of top five highest similarity scores
         top_indices = cosine_sim.argsort(axis=0)

@@ -12,6 +12,11 @@ urlpatterns = [
     path('categories/',views.category_list,name="category-list"),
     path('category/create',views.category_create,name='category-create'),
     path('category/update/<str:pk>',views.category_update,name='category-update'),
-    path('cateogry/delete/<str:pk>',views.category_delete,name='category-delete')
+    path('cateogry/delete/<str:pk>',views.category_delete,name='category-delete'),
+    path('myorder/',views.my_order,name='my-order'),
+    path('checkout/',views.checkout,name='checkout'),
+    path('payment/',views.makepay,name='payment'),
+    path('esewa/success',views.payment_success,),
+    path('khalti/',views.Khalti_initiate,name='khalti-initiate')
     
 ]

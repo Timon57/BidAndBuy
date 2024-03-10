@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Collateral Management{% endblock %}
+
+{% block content %}
+{% include "navbar.html" %}
+
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-6 mx-auto">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title text-center">Collateral Management</h5>
+                </div>
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">Current Collateral Balance: Rs. {{collateral}}</h6>
+                    <hr>
+                    <form action="{% url 'add_collateral' %}" method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="addCollateralAmount" class="form-label">Add Collateral Amount:</label>
+                            <input type="number" class="form-control" id="addCollateralAmount" name="add_collateral_amount" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Add Collateral</button>
+                    </form>
+                    <hr>
+                    <form action="" method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="refundCollateralAmount" class="form-label">Refund Collateral Amount:</label>
+                            <input type="number" class="form-control" id="refundCollateralAmount" name="refund_collateral_amount" required>
+                        </div>
+                        <button type="submit" class="btn btn-success">Refund Collateral</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

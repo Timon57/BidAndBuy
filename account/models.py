@@ -30,16 +30,20 @@ class UserBase(AbstractBaseUser,PermissionsMixin):
     phone_number = models.CharField(max_length=10,blank=True)
     address = models.CharField(max_length=250,blank=True)
     role = models.CharField(max_length=10,choices=ROLE_CHOICES)
+    collateral = models.DecimalField(max_digits=50, decimal_places=2,default=0)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False)
     created = models.DateField(auto_now_add=True)
     updated = models.DateField(auto_now=True)
 
+
     objects = UserManager()
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
+
+
 
     def __str__(self):
         return self.username

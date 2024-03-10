@@ -69,7 +69,8 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'main_app.context_processor.categories'
+                'main_app.context_processor.categories',
+                'main_app.context_processor.get_detail'
             ],
         },
     },
@@ -153,3 +154,15 @@ LOGIN_REDIRECT_URL = 'home'
 #to redirect user to loggedin page when they acces pages which requires log in
 #works for @login_required
 LOGIN_URL = 'login'
+
+#Email configuration
+
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+
+EMAIL_USE_TLS = True
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+DEFAULT_FROM_EMAIL = 'Bid And Buy'
+EMAIL_HOST_USER = 'timonbasnet@gmail.com'
+EMAIL_HOST_PASSWORD = 'xctm thnw wzvs rtsc'
+

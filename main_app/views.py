@@ -1,13 +1,21 @@
+import requests
+import json
+import hmac
+import hashlib
+import base64
+import uuid
 from django.shortcuts import render,get_object_or_404,redirect
 from django.http import JsonResponse
-from .models import Category,Auction,Bid,Product,UserSearch,UserBid
-from .forms import CategoryForm,BidForm,AuctionForm
+from .models import *
+from .forms import CategoryForm,BidForm,AuctionForm,OrderForm
 from django.contrib import messages
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from django.contrib.auth.decorators import login_required
 from .decorators import seller_required
 from .recommendations import auction_recommendation
+
+
 
 #CRUD operation for category starts
 @login_required
@@ -170,6 +178,7 @@ def update_auction_status(request, pk):
 def auction_detail(request, pk):
     auction = get_object_or_404(Auction, id=pk)
     form = BidForm(request.POST or None)
+    
 
     if request.method == 'POST':
         if form.is_valid():
@@ -177,7 +186,7 @@ def auction_detail(request, pk):
             #storing data to use for recommendations
             UserBid.objects.create(user=request.user, auction=auction, bid_value=bid_value, category=auction.category)
 
-            # Perform your custom validation here
+            
             if bid_value <= auction.starting_price:
                 messages.error(request, 'Bid value must be greater than the starting price.')
             if bid_value <= auction.get_max_bid():
@@ -187,6 +196,7 @@ def auction_detail(request, pk):
                 bid.bidder = request.user
                 bid.auction_id = auction
                 bid.save()
+                
                 auction_details = {
                 'bid_value': auction.get_max_bid(),
                 'bidder':auction.get_higest_bidder()
@@ -194,6 +204,17 @@ def auction_detail(request, pk):
             }
 
             return JsonResponse(auction_details)
+    # Check if an order has already been created for the user and the auction
+    existing_order = Order.objects.filter(user=request.user, auction=auction).exists()
+
+    # Create an order if the auction is closed, the user is the winner, and an order doesn't already exist
+    if auction.auction_status == 'closed' and auction.winner == request.user and not existing_order:
+        order = Order.objects.create(
+            user=request.user,
+            auction=auction,
+            total_amount=auction.get_max_bid(),
+            payment_status='pending'
+        )
 
     context = {
         'auction': auction,
@@ -201,3 +222,119 @@ def auction_detail(request, pk):
     }
 
     return render(request, 'main_app/Auction/auction_detail.html', context)
+
+@login_required
+# def my_order(request):
+#     user_id = request.user
+#     win_auction = Auction.objects.filter(winner=user_id)
+#     total_price = 0
+#     for auction in win_auction:
+#         price = auction.get_max_bid()
+#         total_price += price
+
+#     context = {'auctions':win_auction,'total_price':total_price}
+    
+#     return render(request,'main_app/Auction/myorder.html',context)
+def my_order(request):
+    user_orders = Order.objects.filter(user=request.user)
+    total_price = sum(order.total_amount for order in user_orders)
+
+    context = {'total_price':total_price,'orders': user_orders}
+    
+    return render(request,'main_app/Auction/myorder.html',context)
+
+def checkout(request):
+    user_orders = Order.objects.filter(user=request.user)
+    total_price = sum(order.total_amount for order in user_orders)
+    form = OrderForm(request.POST )
+    if request.method == 'POST':
+        if form.is_valid():
+            address = form.cleaned_data['address']
+            phone_number = form.cleaned_data['phone_number']
+            order = FinalOrder.objects.filter(user=request.user,payment_status='pending')
+            print(order)
+            if order:# to check if user has already make order by  providing address
+                return redirect('payment')
+            else:
+                FinalOrder.objects.create(
+                user=request.user,
+                address = address,
+                phone_number = phone_number,
+                total_amount=total_price,
+                payment_status='pending'
+            )
+        return redirect('payment')
+
+    context = {'total_price':total_price,'orders': user_orders,'form':form}
+    
+    return render(request,'main_app/Auction/checkout.html',context)
+@login_required
+def makepay(request):
+    user_orders = Order.objects.filter(user=request.user)
+    total_price = sum(order.total_amount for order in user_orders if order.payment_status == 'pending')
+    try:
+        final_order = FinalOrder.objects.get(user=request.user, payment_status='pending')
+    except FinalOrder.DoesNotExist:
+        messages.error(request, 'No pending orders found.')
+        context = {'total_price':total_price,'orders': user_orders}
+        print(context)
+        return render(request, 'main_app/Auction/payment.html',context)
+
+    secret_key = "8gBm/:&EnhH.1/q"
+    uuid_val = uuid.uuid4()
+    data_to_sign = f"total_amount={total_price},transaction_uuid={uuid_val},product_code=EPAYTEST"
+    result = genSha256(secret_key, data_to_sign)
+
+    context = {'total_price':total_price,'orders': user_orders,'order':final_order,'signature':result,'uuid':uuid_val}
+    print(user_orders)
+    
+    return render(request,'main_app/Auction/payment.html',context)
+
+def genSha256(key, message):
+        key = key.encode('utf-8')
+        message = message.encode('utf-8')
+
+        hmac_sha256 = hmac.new(key, message, hashlib.sha256)
+        digest = hmac_sha256.digest()
+        signature = base64.b64encode(digest).decode('utf-8')
+
+        return signature
+
+def Khalti_initiate(request):
+    url = "https://a.khalti.com/api/v2/epayment/initiate/"
+    order = FinalOrder.objects.get(user=request.user)
+    
+    payload = json.dumps({
+        "return_url": "http://127.0.0.1:8000/",
+        "website_url": "http://127.0.0.1:8000",
+        "amount": float(order.total_amount),
+        "purchase_order_id": order.id,
+        "purchase_order_name": order.id,
+        "customer_info": {
+        "name": order.user.username,
+        "email": order.user.email,
+        "phone": order.user.phone_number
+        }
+    })
+    headers = {
+        'Authorization': 'key 497c8f503e724cf4bed3c14506044368',
+        'Content-Type': 'application/json',
+    }
+
+    response = requests.request("POST", url, headers=headers, data=payload)
+    print(response.text)
+    return JsonResponse("ok",safe=False)
+
+def payment_success(request):
+    request.user
+    final_order = FinalOrder.objects.get(user=request.user)
+    final_order.mark_as_paid()
+    user_orders = Order.objects.filter(user=request.user)
+    for order in user_orders:
+        order.mark_as_paid()
+
+    return redirect('home')
+
+
+
+    
