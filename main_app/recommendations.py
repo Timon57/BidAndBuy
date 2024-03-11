@@ -1,11 +1,11 @@
 from django.core import serializers
 from django.http import JsonResponse
 import pandas as pd
+import numpy as np
 import json
+import scipy
 from.models import Auction,UserSearch,UserBid,Category
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
-from operator import itemgetter
 
 
 #get the user's interactions data stored
@@ -84,15 +84,13 @@ def auction_recommendation(request):
         # print('---user data vector----')
         # print(tfidf_user_matrix)
 
-
         #calclucate cosine similarity
-        cosine_sim = cosine_similarity(tfidf_matrix,tfidf_user_matrix)
+        cosine_sim = calculate_cosine_similarity_matrix(tfidf_matrix,tfidf_user_matrix)
         # print('--cosine similarity matrix--')
         # print(cosine_sim)
 
          # Get indices of top five highest similarity scores
         top_indices = cosine_sim.argsort(axis=0)
-        print(top_indices)
         length = len(top_indices)
 
         top_indices = cosine_sim.argsort(axis=0)[-3:]
@@ -108,6 +106,32 @@ def auction_recommendation(request):
         # print(top_auctions)
 
         return top_auctions
+    
+
+def calculate_cosine_similarity(vector1, vector2):
+    if isinstance(vector1, scipy.sparse.csr.csr_matrix):
+        vector1 = vector1.toarray().flatten()
+    if isinstance(vector2, scipy.sparse.csr.csr_matrix):
+        vector2 = vector2.toarray().flatten()
+    dot_product = np.dot(vector1, vector2)
+    norm_vector1 = np.linalg.norm(vector1)
+    norm_vector2 = np.linalg.norm(vector2)
+    
+    if norm_vector1 != 0 and norm_vector2 != 0:
+        similarity = dot_product / (norm_vector1 * norm_vector2)
+    else:
+        similarity = 0
+    
+    return similarity
+
+def calculate_cosine_similarity_matrix(matrix1, matrix2):
+    similarity_matrix = np.zeros((matrix1.shape[0], matrix2.shape[0]))
+    
+    for i in range(matrix1.shape[0]):
+        for j in range(matrix2.shape[0]):
+            similarity_matrix[i][j] = calculate_cosine_similarity(matrix1[i], matrix2[j])
+    
+    return similarity_matrix
     
         
         

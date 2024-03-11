@@ -69,11 +69,11 @@
             </div>
         </div>
     </div>
-     <div class="text-center mt-3">
+     {% comment %} <div class="text-center mt-3">
         <div class="">
             <a class="btn btn-success fw-bold" type="button" href={%url "khalti-initiate" %}>Pay With Khalti</a>
         </div>
-    </div> 
+    </div>  {% endcomment %}
     <div class="text-center mt-3">
         <form action="https://rc-epay.esewa.com.np/api/epay/main/v2/form" method="POST">
             <input type="hidden" id="amount" name="amount" value="{{order.total_amount}}" required>
@@ -88,7 +88,7 @@
             <input type="hidden" id="signed_field_names" name="signed_field_names" value="total_amount,transaction_uuid,product_code" required>
             <input type="hidden" id="signature" name="signature" value="{{signature}}" required>
             <input value="Make Payment" type="submit" class="btn btn-success fw-bold" >
-            </form>
+        </form>
     </div>
     {% else %}
     <div class="text-center mt-3">

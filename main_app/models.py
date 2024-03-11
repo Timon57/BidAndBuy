@@ -81,6 +81,7 @@ class Auction(models.Model):
     title = models.CharField(max_length=255)
     description = models.TextField()
     starting_price = models.DecimalField(max_digits=10, decimal_places=2)
+    marked_price = models.DecimalField(max_digits=10, decimal_places=2)
     auction_status = models.CharField(max_length=20, choices=AUCTION_STATUS_CHOICES, default='draft')
     start_datetime = models.DateTimeField()
     end_datetime = models.DateTimeField()
@@ -174,7 +175,7 @@ class UserBid(models.Model):
 class Order(models.Model):
     PAYMENT_STATUS_CHOICES = (
         ('pending', 'pending'),
-        ('paid and shpped', 'paid and shipped'),
+        ('paid and shipped', 'paid and shipped'),
     )
     user = models.ForeignKey(AUTH_USER_MODEL, on_delete=models.CASCADE)
     auction = models.ForeignKey(Auction, on_delete=models.CASCADE)
@@ -186,13 +187,13 @@ class Order(models.Model):
         return f"Order #{self.pk} - {self.user.username}"
 
     def mark_as_paid(self):
-        self.payment_status = 'paid'
+        self.payment_status = 'paid and shipped'
         self.save()
 
 class FinalOrder(models.Model):
     PAYMENT_STATUS_CHOICES = (
         ('pending', 'pending'),
-        ('paid and shpped', 'paid and shipped'),
+        ('paid and shipped', 'paid and shipped'),
     )
     user = models.ForeignKey(AUTH_USER_MODEL, on_delete=models.CASCADE)
     total_amount = models.DecimalField(max_digits=10, decimal_places=2)
@@ -203,7 +204,7 @@ class FinalOrder(models.Model):
 
     def __str__(self):
         return f"Final Order #{self.pk} - {self.user.username}"
+    
     def mark_as_paid(self):
-        self.payment_status = 'paid'
+        self.payment_status = 'paid and shipped' 
         self.save()
-

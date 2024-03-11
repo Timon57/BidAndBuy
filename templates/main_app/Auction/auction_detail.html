@@ -17,6 +17,7 @@
             <h5 class="card-title">Auction Details</h5>
             <ul class="list-group list-group-flush">
               <li class="list-group-item">Starting Price: Rs.{{ auction.starting_price }}</li>
+              <li class="list-group-item">Marked Price: Rs.{{ auction.marked_price }}</li>
               <li class="list-group-item" id="current-highest-bid">Current Highest Bid: Rs.{{ auction.get_max_bid|default:""|floatformat:2 }}</li>
               <li class="list-group-item" id="current-highest-bidder">Highest Bidder: {{ auction.get_higest_bidder }}</li>
               <li class="list-group-item">Seller: {{ auction.seller }}</li>

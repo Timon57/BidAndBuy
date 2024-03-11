@@ -4,6 +4,7 @@ import hmac
 import hashlib
 import base64
 import uuid
+from django.http import QueryDict
 from django.shortcuts import render,get_object_or_404,redirect
 from django.http import JsonResponse
 from .models import *
@@ -326,7 +327,6 @@ def Khalti_initiate(request):
     return JsonResponse("ok",safe=False)
 
 def payment_success(request):
-    request.user
     final_order = FinalOrder.objects.get(user=request.user)
     final_order.mark_as_paid()
     user_orders = Order.objects.filter(user=request.user)
@@ -335,6 +335,83 @@ def payment_success(request):
 
     return redirect('home')
 
+def collateral(request):
+    orders = Order.objects.filter(user=request.user)
+    utilzed_collateral = sum(order.total_amount for order in orders)
+    total_limit = request.user.collateral*5
+    allowed_refund = request.user.collateral - utilzed_collateral
+    if request.method == 'POST':
+        amount = request.POST.get('collateral')
+        return redirect('collateral-load', amount=amount)
+
+    context = {
+        'utilized_collateral':utilzed_collateral,
+        'total_limit':total_limit,
+        'allowed_refund':allowed_refund,
+        }
+    return render(request,'main_app/Auction/collateral.html',context)
+
+def collateral_load(request,amount):
+    orders = Order.objects.filter(user=request.user)
+    utilzed_collateral = sum(order.total_amount for order in orders)
+    total_limit = request.user.collateral*5
+    allowed_refund = request.user.collateral - utilzed_collateral
+    secret_key = "8gBm/:&EnhH.1/q"
+    uuid_val = uuid.uuid4()
+    data_to_sign = f"total_amount={amount},transaction_uuid={uuid_val},product_code=EPAYTEST"
+    result = genSha256(secret_key, data_to_sign)
+    if request.method == 'POST':
+        return redirect('collateral-load')
+    context = {
+        'utilized_collateral':utilzed_collateral,
+        'total_limit':total_limit,
+        'total_amount':amount,
+        'allowed_refund':allowed_refund,
+        'signature':result,
+        'uuid':uuid_val
+        }
+    return render(request,'main_app/Auction/load_collateral.html',context)
+
+def collateral_success(request,amount):
+    # Parse the query parameters from the request URL
+
+    # Convert the total_amount to Decimal
+    total_amount = Decimal(amount)
+
+    user = request.user
+    user.collateral += total_amount
+    user.save()
+
+    return redirect('collateral-home')
+
+def collateral_return(request):
+    amount = request.POST.get('refund_collateral_amount')
+    user = request.user
+    if amount:
+        user.collateral -= Decimal(amount)
+        user.save()
+        # Send a success message
+        messages.success(request, f"Amount Rs. {amount} has been refunded to your Esewa account.")
+    else:
+        # Send a warning message if no amount is provided
+        messages.warning(request, "No amount provided for refund.")
+
+    return redirect('collateral-home')
+
+
+def calculate_collateral(user_id, orders):
+    try:
+        order = FinalOrder.objects.get(user=user_id,payment_status='pending')
+    except FinalOrder.DoesNotExist:
+        order = None
+    user = UserBase.objects.get(id=user_id)
+    total_price = sum(order.total_amount for order in orders)
+    if order:
+
+        collateral = (user.collateral * 5) - total_price
+    else:
+        collateral = (user.collateral * 5)
+    return collateral
 
 
     

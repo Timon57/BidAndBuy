@@ -17,6 +17,11 @@ urlpatterns = [
     path('checkout/',views.checkout,name='checkout'),
     path('payment/',views.makepay,name='payment'),
     path('esewa/success',views.payment_success,),
-    path('khalti/',views.Khalti_initiate,name='khalti-initiate')
+    path('khalti/',views.Khalti_initiate,name='khalti-initiate'),
+    path('collateral/',views.collateral,name='collateral-home'),
+    path('collateral-load/<int:amount>/', views.collateral_load, name='collateral-load'),
+    path('collateral-success/<int:amount>/',views.collateral_success, name='collateral-success'),
+    path('collateral-return',views.collateral_return,name='collateral-return')
+
     
 ]

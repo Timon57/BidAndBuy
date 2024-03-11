@@ -16,7 +16,7 @@ class BidForm(ModelForm):
 class AuctionForm(ModelForm):
     class Meta:
         model = Auction
-        exclude = ['seller','auction_status']
+        exclude = ['seller','auction_status','winner']
 
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs)
