@@ -24,10 +24,11 @@
                         <li><a class="dropdown-item" href="{% url 'category-search' category.id %}">{{ category.name }}</a></li>
                         {% endfor %}
                     </ul>
+                {% if request.user.role == 'Buyer' %}
                 </li>
                     <a class="nav-link" href="{% url 'collateral-home' %}">Collateral</a>
                 <li>
-
+                    {% endif %}
                 </li>
                 {% if win_auction %}
                     {% if order %}
@@ -54,7 +55,9 @@
             {% if user.is_authenticated %}
             <div class="ms-3">
                 <span class="me-2">Welcome, <strong>{{ user.username }}</strong></span>
+                {% if user.role == 'Buyer' %}
                 <span class="me-2">Your Limit: <strong>Rs. {{collateral}}</strong></span>
+                {% endif %}
                 <a type="button" role="button" href="{% url 'logout' %}" class="btn btn-outline-secondary">
                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor"
                         class="bi bi-door-closed" viewBox="0 0 16 16">

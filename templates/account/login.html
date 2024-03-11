@@ -11,7 +11,15 @@
                     <div class="card-body p-md-3">
                         <div class="row justify-content-center">
                             <div class="col-md-10 col-lg-16 col-xl-5 order-2 order-lg-1">
-
+                                {% if messages %}
+                                    <div class="messages">
+                                    {% for message in messages %}
+                                        <div class="success {% if message.tags %}success-{{ message.tags }} {% endif %}" style="color: green;">
+                                            {{ message }}
+                                        </div>
+                                    {% endfor %}
+                                    </div>
+                                {% endif %}
                                 <p class="text-center h1 fw-bold mb-4 mx-1 mx-md-5 mt-2">Log in</p>
 
                                 <form class="" method="post" action="">

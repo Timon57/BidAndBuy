@@ -103,7 +103,7 @@ def auction_recommendation(request):
 
         # Retrieve Auction objects for the most similar items
         top_auctions = Auction.objects.filter(id__in=top_item_ids)
-        # print(top_auctions)
+        print(top_auctions)
 
         return top_auctions
     

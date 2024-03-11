@@ -4,6 +4,7 @@ import hmac
 import hashlib
 import base64
 import uuid
+from django.db.models import Q
 from django.http import QueryDict
 from django.shortcuts import render,get_object_or_404,redirect
 from django.http import JsonResponse
@@ -115,7 +116,12 @@ def auction_update(request, pk):
     context = {'form': form, 'auction': data}
 
     return render(request, 'main_app/Auction/auction_update.html', context)
-
+@seller_required
+@login_required
+def auction_delete(request,pk):
+    data = get_object_or_404(Auction,id=pk)
+    data.delete()
+    return redirect('auction-list')
 
 #Home page view of the website
 @login_required
@@ -135,14 +141,16 @@ def home(request):
     }
     return render(request,'main_app/Auction/home.html',context)
 
+@login_required
 def homeSearch(request):
     query = request.GET.get('q')
     #storing the query searched by user for using it to recommend items
-    UserSearch.objects.create(user=request.user, searchQuery=query)
     if request.user.role == 'Buyer':
-        auctions = Auction.objects.filter(title__icontains=query,auction_status='open')
+        print('yeah')
+        UserSearch.objects.create(user=request.user, searchQuery=query)
+        auctions = Auction.objects.filter(Q(title__icontains=query) | Q(description__icontains=query),auction_status='open')
     else:
-        auctions = Auction.objects.filter(title__icontains=query)
+        auctions = Auction.objects.filter(Q(title__icontains=query) | Q(description__icontains=query))
     
     context = {
         'auctions':auctions
@@ -244,6 +252,7 @@ def my_order(request):
     
     return render(request,'main_app/Auction/myorder.html',context)
 
+@login_required
 def checkout(request):
     user_orders = Order.objects.filter(user=request.user)
     total_price = sum(order.total_amount for order in user_orders)
@@ -326,6 +335,7 @@ def Khalti_initiate(request):
     print(response.text)
     return JsonResponse("ok",safe=False)
 
+@login_required
 def payment_success(request):
     final_order = FinalOrder.objects.get(user=request.user)
     final_order.mark_as_paid()
@@ -334,10 +344,11 @@ def payment_success(request):
         order.mark_as_paid()
 
     return redirect('home')
+@login_required
 
 def collateral(request):
     orders = Order.objects.filter(user=request.user)
-    utilzed_collateral = sum(order.total_amount for order in orders)
+    utilzed_collateral = sum(order.total_amount for order in orders if order.payment_status=='pending')
     total_limit = request.user.collateral*5
     allowed_refund = request.user.collateral - utilzed_collateral
     if request.method == 'POST':
@@ -351,6 +362,7 @@ def collateral(request):
         }
     return render(request,'main_app/Auction/collateral.html',context)
 
+@login_required
 def collateral_load(request,amount):
     orders = Order.objects.filter(user=request.user)
     utilzed_collateral = sum(order.total_amount for order in orders)
@@ -372,6 +384,7 @@ def collateral_load(request,amount):
         }
     return render(request,'main_app/Auction/load_collateral.html',context)
 
+@login_required
 def collateral_success(request,amount):
     # Parse the query parameters from the request URL
 
@@ -384,6 +397,7 @@ def collateral_success(request,amount):
 
     return redirect('collateral-home')
 
+@login_required
 def collateral_return(request):
     amount = request.POST.get('refund_collateral_amount')
     user = request.user
@@ -398,7 +412,7 @@ def collateral_return(request):
 
     return redirect('collateral-home')
 
-
+@login_required
 def calculate_collateral(user_id, orders):
     try:
         order = FinalOrder.objects.get(user=user_id,payment_status='pending')

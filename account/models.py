@@ -25,6 +25,8 @@ class UserBase(AbstractBaseUser,PermissionsMixin):
     ('Seller','Seller'),
     )
     username = models.CharField(max_length=100,blank=True)
+    pan_number = models.CharField(max_length=100, blank=True, default=0)
+    citizenship  = models.ImageField(upload_to='images/',blank=True)
     email = models.EmailField(unique=True)
     firstname  = models.CharField(max_length=100,blank=True)
     phone_number = models.CharField(max_length=10,blank=True)

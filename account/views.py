@@ -4,7 +4,7 @@ from django.utils.http import urlsafe_base64_encode,urlsafe_base64_decode
 from django.template.loader import render_to_string
 from django.utils.encoding import force_bytes,force_str
 from django.http import HttpResponse
-from .forms import RegistrationForm
+from .forms import RegistrationForm,SellerRegistrationForm
 from django.core.mail import send_mail
 from .forms import UserLoginForm
 from django.contrib.auth import authenticate,login,logout
@@ -19,6 +19,7 @@ def buyer_account_register(request):
             user = form.save(commit=False)
             user.email = form.cleaned_data['email']
             user.set_password(form.cleaned_data['password'])
+            user.role = 'Buyer'
             user.is_active = False
             user.save()
             current_site = get_current_site(request)
@@ -62,14 +63,18 @@ def account_activate(request,uidb64,token):
 
 def seller_account_register(request):
     if request.method == 'POST':
-        form = RegistrationForm(request.POST)
+        form = SellerRegistrationForm(request.POST,request.FILES)
         if form.is_valid():
-
+            print(form.cleaned_data['citizenship'])
             user = form.save(commit=False)
             user.email = form.cleaned_data['email']
             user.set_password(form.cleaned_data['password'])
             user.role = 'Seller'
+            user.is_active = False
             user.save()
+            print('----')
+            print(user.citizenship)
+            messages.success(request,'Your account is uder verification. Stay tuned!')
             return redirect('login')
         else:
             print(form.errors)
@@ -77,7 +82,7 @@ def seller_account_register(request):
             context = {'form': form}
             return render(request, 'account/seller_register.html', context)
     else:
-        form = RegistrationForm()
+        form = SellerRegistrationForm()
         print('-----------------')
         context = {'form': form}
         return render(request, 'account/seller_register.html', context)
@@ -108,5 +113,3 @@ def user_login(request):
     return render(request, 'account/login.html', {'form': form})
 
 
-def verify_email(request):
-    pass
