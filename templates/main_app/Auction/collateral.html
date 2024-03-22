@@ -25,7 +25,11 @@
                     <h6 class="card-subtitle mb-2 text-muted">Total Bidding Limit: Rs. {{ total_limit }}</h6>
                     <h6 class="card-subtitle mb-2 text-muted">Limit utilized: Rs. {{ utilized_collateral }}</h6>
                     <h6 class="card-subtitle mb-2 text-muted">Bidding Limit Left: Rs. {{ collateral }}</h6>
+                    {% if allowed_refund > 0 %}
                     <h6 class="card-subtitle mb-2 text-muted">Allowed Refund: Rs. {{ allowed_refund }}</h6>
+                    {%else%}
+                    <h6 class="card-subtitle mb-2 text-muted">Allowed Refund: Rs. 0</h6>
+                    {%endif%}
                     <hr>
                     <form action="" method="post" onsubmit="return checkCollateral();">
                         {% csrf_token %}

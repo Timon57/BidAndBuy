@@ -89,8 +89,11 @@ auctionSocket.onmessage = function (e) {
   } else if (data.type === 'bid_update') {
     // Handle bid update logic
     const bidValue = Number(data.bid_value);
+    console.log(data.collateral)
     document.getElementById('current-highest-bid').innerText = `Current Highest Bid: Rs.${bidValue.toFixed(2)}`;
     document.getElementById('current-highest-bidder').innerText = `Highest Bidder: ${data.highest_bidder}`;
+    document.getElementById('collateral-limit').innerHTML = `Your Limit: <strong>Rs. ${data.collateral.toFixed(2)}</strong>`;
+
     const remainingTime = data.remaining_time;
     updateCountdown(remainingTime);
   } else if (data.type === 'auction_status_update') {
@@ -144,6 +147,14 @@ function submitBid(event) {
 
   let bidValue = document.getElementById('id_bid_value').value;
   let bidder ="{{ user.username }}";
+
+  var collateralLimitElement = document.getElementById("collateral-limit");
+  
+  var collateralText = collateralLimitElement.querySelector("strong").textContent;
+
+  // Extract the numerical value from the text content (assuming the format "Rs. 12345")
+  var collateral2 = parseInt(collateralText.split("Rs. ")[1]);
+
   // Perform client-side validation
   let validationMessages = document.getElementById('validation-messages');
   validationMessages.innerHTML = ''; // Clear previous messages
@@ -170,7 +181,7 @@ function submitBid(event) {
     document.getElementById('id_bid_value').value = '';
     return;
   }
-  if (parseFloat(bidValue) > parseFloat('{{collateral}}')) {
+  if (parseFloat(bidValue) > (parseFloat('{{collateral}}')+parseFloat('{{user_highest_bid}}'))) {
     validationMessages.innerText = "You don't have enough collateral ";
     document.getElementById('id_bid_value').value = '';
     return;
@@ -203,10 +214,12 @@ function submitBid(event) {
       validationMessages.innerText = 'Error submitting bid. Please try again.';
     });
     console.log(bidder)
+    var user = "{{request.user.id}}";
   auctionSocket.send(JSON.stringify({
     bidValue: bidValue,
     bidder:bidder,
-
+    collateral:collateral2,
+    user:user,
     
   }));
   value = bidValue

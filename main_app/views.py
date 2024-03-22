@@ -4,6 +4,7 @@ import hmac
 import hashlib
 import base64
 import uuid
+from django.db.models import Avg
 from django.db.models import Q
 from django.http import QueryDict
 from django.shortcuts import render,get_object_or_404,redirect
@@ -187,7 +188,13 @@ def update_auction_status(request, pk):
 def auction_detail(request, pk):
     auction = get_object_or_404(Auction, id=pk)
     form = BidForm(request.POST or None)
-    
+    user = request.user
+    user_highest_bid = get_highest_bid_auction(user.id,auction.id)
+
+    category_avg_price = Auction.objects.filter(category=auction.category).aggregate(Avg('marked_price'))['marked_price__avg']
+    print('-----')
+    print(category_avg_price)
+
 
     if request.method == 'POST':
         if form.is_valid():
@@ -208,7 +215,8 @@ def auction_detail(request, pk):
                 
                 auction_details = {
                 'bid_value': auction.get_max_bid(),
-                'bidder':auction.get_higest_bidder()
+                'bidder':auction.get_higest_bidder(),
+                'user_highest_bid':user_highest_bid
                 # Add other details as needed
             }
 
@@ -228,10 +236,23 @@ def auction_detail(request, pk):
     context = {
         'auction': auction,
         'form': form,
+        'user_highest_bid':user_highest_bid,
+        'category_avg_price': category_avg_price,
     }
 
     return render(request, 'main_app/Auction/auction_detail.html', context)
+def get_highest_bid_auction(user,auction_id):
+        auction = Auction.objects.get(id=auction_id)
+        highest_bids = Decimal(0.0)
 
+        user = UserBase.objects.get(id=user)
+        max_bid_value = None
+        for bid in user.bids.filter(auction_id=auction.id):
+            if max_bid_value is None or bid.bid_value > max_bid_value:
+                max_bid_value = bid.bid_value
+        if max_bid_value is not None:
+            highest_bids += max_bid_value
+        return highest_bids
 @login_required
 # def my_order(request):
 #     user_id = request.user
@@ -347,8 +368,9 @@ def payment_success(request):
 @login_required
 
 def collateral(request):
+    current_bids = get_highest_bid(request)#to get current higest bid of user in each auction
     orders = Order.objects.filter(user=request.user)
-    utilzed_collateral = sum(order.total_amount for order in orders if order.payment_status=='pending')
+    utilzed_collateral = sum(order.total_amount for order in orders if order.payment_status=='pending')+current_bids
     total_limit = request.user.collateral*5
     allowed_refund = request.user.collateral - utilzed_collateral
     if request.method == 'POST':
@@ -361,6 +383,22 @@ def collateral(request):
         'allowed_refund':allowed_refund,
         }
     return render(request,'main_app/Auction/collateral.html',context)
+
+#to get the user higest bid for each auction
+def get_highest_bid(request):
+    auctions = Auction.objects.all()
+    highest_bids = Decimal(0.0)
+
+    user = request.user
+    for auction in auctions:
+        max_bid_value = None
+        for bid in user.bids.filter(auction_id=auction.id):
+            if max_bid_value is None or bid.bid_value > max_bid_value:
+                max_bid_value = bid.bid_value
+        if max_bid_value is not None:
+            highest_bids += max_bid_value
+    return highest_bids
+        
 
 @login_required
 def collateral_load(request,amount):

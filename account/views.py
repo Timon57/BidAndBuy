@@ -70,6 +70,8 @@ def seller_account_register(request):
             user.email = form.cleaned_data['email']
             user.set_password(form.cleaned_data['password'])
             user.role = 'Seller'
+            user.pan_number = form.cleaned_data['pan_number']
+            user.citizenship = form.cleaned_data['citizenship']
             user.is_active = False
             user.save()
             print('----')

@@ -77,7 +77,7 @@ class Auction(models.Model):
     )
     
 
-    winner = models.ForeignKey(AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,editable=False)
+    winner = models.ForeignKey(AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,editable=True)
     title = models.CharField(max_length=255)
     description = models.TextField()
     starting_price = models.DecimalField(max_digits=10, decimal_places=2)
@@ -139,7 +139,7 @@ def update_auction_status(sender, instance, **kwargs):
 pre_save.connect(update_auction_status, sender=Auction)
 
 class Bid(models.Model):
-    bidder = models.ForeignKey(AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="bid_owner")
+    bidder = models.ForeignKey(AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="bids")
     auction_id = models.ForeignKey(Auction, on_delete=models.CASCADE, related_name="bid_listing")
     bid_value = models.DecimalField(max_digits=10, decimal_places=2)
     bid_datetime = models.DateTimeField(auto_now=True)

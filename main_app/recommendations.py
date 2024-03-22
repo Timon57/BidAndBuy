@@ -89,23 +89,26 @@ def auction_recommendation(request):
         # print('--cosine similarity matrix--')
         # print(cosine_sim)
 
-         # Get indices of top five highest similarity scores
-        top_indices = cosine_sim.argsort(axis=0)
-        length = len(top_indices)
-
+         
         top_indices = cosine_sim.argsort(axis=0)[-3:]
-        print(top_indices)
 
 
         # Get IDs of most similar items
         top_item_ids = df.iloc[top_indices.flatten()]['id'].tolist()
         # print(top_item_ids)
+        
+        
+        # Create a mapping of IDs to similarity scores
+        similarity_scores = {item_id: cosine_sim[index[0]] for index, item_id in zip(top_indices, top_item_ids)}
+
 
         # Retrieve Auction objects for the most similar items
+        
         top_auctions = Auction.objects.filter(id__in=top_item_ids)
-        print(top_auctions)
 
-        return top_auctions
+        ordered_top_auctions = sorted(top_auctions, key=lambda x: similarity_scores[x.id], reverse=True)
+
+        return ordered_top_auctions
     
 
 def calculate_cosine_similarity(vector1, vector2):
